@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation"
 import { ArrowLeft, Star, ExternalLink, Heart, Share2, Info } from "lucide-react"
 import Header from "@/components/Header"
 import type { Product } from "@/types"
+import { callChatGPT } from "@/lib/api"
 
 export default function ProductDetailPage() {
   const params = useParams()
@@ -12,6 +13,10 @@ export default function ProductDetailPage() {
   const [product, setProduct] = useState<Product | null>(null)
   const [selectedImage, setSelectedImage] = useState(0)
   const [showAnalysis, setShowAnalysis] = useState(false)
+  const [aiSummary, setAiSummary] = useState<string>("")
+  const [aiAnalysis, setAiAnalysis] = useState<string>("")
+  const [aiLoading, setAiLoading] = useState(true)
+  const [aiError, setAiError] = useState<string>("")
 
   useEffect(() => {
     // Simulate fetching product details
@@ -45,6 +50,35 @@ export default function ProductDetailPage() {
       ],
     }
     setProduct(mockProduct)
+
+    // AI summary and analysis generation
+    async function fetchAISummaryAndAnalysis() {
+      setAiLoading(true)
+      setAiError("")
+      try {
+        const prompt = `You are an expert product analyst. Given the following product details, generate two outputs:\n1. A concise, persuasive summary (max 100 words) for the section 'Why you might like this'.\n2. A short analysis of what verified buyers are saying, grouped by themes (e.g., Shrinkage, Neckline Style, Fit), for the section 'What people are saying'.\n\nProduct details: Title: ${mockProduct.title}, Brand: ${mockProduct.brand}, Price: $${mockProduct.price}, Features: ${mockProduct.features?.join(", ")}, Pros: ${mockProduct.pros?.join(", ")}, Cons: ${mockProduct.cons?.join(", ")}, Description: ${mockProduct.description}`
+        const messages = [
+          { role: "system" as "assistant", content: "You are a helpful AI shopping assistant." },
+          { role: "user" as "user", content: prompt },
+        ]
+        const response = await callChatGPT(messages)
+        // Expecting the AI to return a response with two sections separated by a delimiter
+        // e.g., 'Why you might like this: ...\n\nWhat people are saying: ...'
+        const content = response.choices?.[0]?.message?.content || ""
+        const [summary, analysis] = content.split(/\n\n|\n(?=What people are saying)/i)
+        setAiSummary(summary?.replace(/^Why you might like this:/i, "").trim() || "")
+        setAiAnalysis(analysis?.replace(/^What people are saying:/i, "").trim() || "")
+      } catch (err) {
+        setAiError("Failed to generate AI summary. Showing default content.")
+        setAiSummary(mockProduct.whyBuy)
+        setAiAnalysis(
+          `Shrinkage: Approximately 30% of users reported minimal shrinkage after washing, with some stating that the shirts shrunk down a size.\n\nNeckline Style: 67% of users praised the neckline style, but 33% found it too tight or uncomfortable after washing.\n\nFit: 70% of users appreciated the slim fit, noting it was suitable for those with athletic builds.`
+        )
+      } finally {
+        setAiLoading(false)
+      }
+    }
+    fetchAISummaryAndAnalysis()
   }, [params.id])
 
   if (!product) {
@@ -164,34 +198,23 @@ export default function ProductDetailPage() {
                 </button>
               </div>
 
-              <p className="text-gray-300">{product.whyBuy}</p>
+              {aiLoading ? (
+                <p className="text-gray-400 animate-pulse">Generating summary...</p>
+              ) : aiError ? (
+                <p className="text-red-400">{aiError}</p>
+              ) : (
+                <p className="text-gray-300">{aiSummary}</p>
+              )}
 
               {showAnalysis && (
                 <div className="space-y-4 pt-4 border-t border-gray-700">
                   <div>
                     <h4 className="font-medium text-white mb-2">What people are saying</h4>
-                    <div className="space-y-3 text-sm text-gray-300">
-                      <div>
-                        <p className="font-medium">Shrinkage:</p>
-                        <p>
-                          Approximately 30% of users reported minimal shrinkage after washing, with some stating that
-                          the shirts shrunk down a size.
-                        </p>
-                      </div>
-                      <div>
-                        <p className="font-medium">Neckline Style:</p>
-                        <p>
-                          67% of users praised the neckline style, but 33% found it too tight or uncomfortable after
-                          washing.
-                        </p>
-                      </div>
-                      <div>
-                        <p className="font-medium">Fit:</p>
-                        <p>
-                          70% of users appreciated the slim fit, noting it was suitable for those with athletic builds.
-                        </p>
-                      </div>
-                    </div>
+                    {aiLoading ? (
+                      <p className="text-gray-400 animate-pulse">Generating analysis...</p>
+                    ) : (
+                      <div className="space-y-3 text-sm text-gray-300 whitespace-pre-line">{aiAnalysis}</div>
+                    )}
                   </div>
                 </div>
               )}

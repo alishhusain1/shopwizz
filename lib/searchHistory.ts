@@ -2,6 +2,7 @@ import { supabase } from "./supabase"
 import { addSearchToHistory } from "./auth"
 import type { SearchHistoryEntry, SearchResult } from "@/types/database"
 import type { Product, SearchFilters } from "@/types"
+import { v4 as uuidv4 } from 'uuid';
 
 export async function saveSearchToHistory(
   userId: string | null,
@@ -10,7 +11,7 @@ export async function saveSearchToHistory(
   products: Product[],
 ) {
   const searchEntry: SearchHistoryEntry = {
-    id: crypto.randomUUID(),
+    id: uuidv4(),
     query,
     filters,
     results: products.map((product) => ({

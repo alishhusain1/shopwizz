@@ -4,6 +4,7 @@ import type React from "react"
 
 import { useState, useRef } from "react"
 import { Send, Mic, Settings, ChevronUp, ChevronDown, Paperclip } from "lucide-react"
+import { callChatGPT, ChatMessage } from "@/lib/api"
 
 interface ChatWidgetProps {
   onSearch: (query: string) => void
@@ -16,12 +17,26 @@ export default function ChatWidget({ onSearch, isLoading, isMobile = false }: Ch
   const [isRecording, setIsRecording] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
   const [isExpanded, setIsExpanded] = useState(false)
+  const [messages, setMessages] = useState<{ id: string; type: "user" | "ai"; content: string; timestamp: Date }[]>([])
+  const [loading, setLoading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (message.trim()) {
-      onSearch(message.trim())
+      const userMsg = { id: crypto.randomUUID(), type: "user" as const, content: message.trim(), timestamp: new Date() }
+      setMessages((prev) => [...prev, userMsg])
       setMessage("")
+      setLoading(true)
+      try {
+        const chatMessages: ChatMessage[] = [...messages, userMsg].map(m => ({ role: m.type === "user" ? "user" : "assistant", content: m.content }))
+        const response = await callChatGPT(chatMessages)
+        const aiMsg = { id: crypto.randomUUID(), type: "ai" as const, content: response.choices[0].message.content, timestamp: new Date() }
+        setMessages((prev) => [...prev, aiMsg])
+      } catch (err) {
+        setMessages((prev) => [...prev, { id: crypto.randomUUID(), type: "ai", content: "Sorry, something went wrong.", timestamp: new Date() }])
+      } finally {
+        setLoading(false)
+      }
     }
   }
 
@@ -63,14 +78,29 @@ export default function ChatWidget({ onSearch, isLoading, isMobile = false }: Ch
           <button
             onClick={() => setIsExpanded(!isExpanded)}
             className="p-2 text-gray-400 hover:text-white transition-colors"
+            aria-label="Expand chat"
+            data-testid="expand-chat"
           >
             {isExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronUp className="w-5 h-5" />}
           </button>
         </div>
 
-        {/* Expandable Content */}
+        {/* Chat Messages - always visible, like desktop */}
+        <div className="p-4 space-y-2 max-h-96 overflow-y-auto">
+          {messages.map((msg) => (
+            <div key={msg.id} className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}>
+              <div className={`max-w-[80%] p-3 rounded-lg ${msg.type === 'user' ? 'bg-purple-600 text-white' : 'bg-gray-700 text-gray-100'}`}>
+                <p className="text-sm">{msg.content}</p>
+                <span className="text-xs opacity-70 mt-1 block">{msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Expandable Content (filters/help) */}
         {isExpanded && (
           <div className="p-4 space-y-4 max-h-96 overflow-y-auto">
+            {/* Existing intro/help text and filters */}
             <div className="bg-purple-900/30 rounded-lg p-3">
               <p className="text-sm text-gray-300">
                 I can help you find what you're looking for. Just type or talk to me. Try asking for something specific
@@ -183,6 +213,17 @@ export default function ChatWidget({ onSearch, isLoading, isMobile = false }: Ch
 
       {/* Chat Content */}
       <div className="flex-1 p-4 space-y-4 overflow-y-auto">
+        {/* Chat Messages */}
+        <div className="space-y-2">
+          {messages.map((msg) => (
+            <div key={msg.id} className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}>
+              <div className={`max-w-[80%] p-3 rounded-lg ${msg.type === 'user' ? 'bg-purple-600 text-white' : 'bg-gray-700 text-gray-100'}`}>
+                <p className="text-sm">{msg.content}</p>
+                <span className="text-xs opacity-70 mt-1 block">{msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+              </div>
+            </div>
+          ))}
+        </div>
         <div className="bg-purple-900/30 rounded-lg p-4">
           <p className="text-sm text-gray-300">
             I can help you find what you're looking for. Just type or talk to me. Try asking for something specific like

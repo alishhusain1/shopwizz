@@ -10,6 +10,7 @@ import { useAuth } from "@/contexts/AuthContext"
 import { saveSearchToHistory } from "@/lib/searchHistory"
 import EmailVerificationBanner from "./EmailVerificationBanner"
 import { useEmailVerification } from "@/hooks/useEmailVerification"
+import { callChatGPT } from "@/lib/api"
 
 interface SearchResultsLayoutProps {
   searchQuery: string
@@ -21,10 +22,15 @@ export default function SearchResultsLayout({ searchQuery, onProductClick, onNew
   const [products, setProducts] = useState<Product[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [filters, setFilters] = useState<SearchFilters>({})
-  const [chatMessages, setChatMessages] = useState([
+  const [chatMessages, setChatMessages] = useState<{
+    id: string;
+    type: "user" | "ai";
+    content: string;
+    timestamp: Date;
+  }[]>([
     {
       id: "1",
-      type: "ai" as const,
+      type: "ai",
       content: `Here are some ${searchQuery.toLowerCase()} under $20, available for purchase:`,
       timestamp: new Date(),
     },
@@ -118,7 +124,7 @@ export default function SearchResultsLayout({ searchQuery, onProductClick, onNew
     }, 1000)
   }
 
-  const handleChatMessage = (message: string) => {
+  const handleChatMessage = async (message: string) => {
     const newMessage = {
       id: Date.now().toString(),
       type: "user" as const,
@@ -127,16 +133,30 @@ export default function SearchResultsLayout({ searchQuery, onProductClick, onNew
     }
     setChatMessages((prev) => [...prev, newMessage])
 
-    // Simulate AI response
-    setTimeout(() => {
+    try {
+      const chatHistory = [...chatMessages, newMessage].map((m) => ({
+        role: m.type === "user" ? "user" as const : "assistant" as const,
+        content: m.content,
+      }))
+      const response = await callChatGPT(chatHistory)
       const aiResponse = {
         id: (Date.now() + 1).toString(),
         type: "ai" as const,
-        content: "I can help you refine your search or find specific products. What are you looking for?",
+        content: response.choices[0].message.content,
         timestamp: new Date(),
       }
       setChatMessages((prev) => [...prev, aiResponse])
-    }, 1000)
+    } catch (err) {
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          id: (Date.now() + 2).toString(),
+          type: "ai",
+          content: "Sorry, something went wrong.",
+          timestamp: new Date(),
+        },
+      ])
+    }
   }
 
   // If user is logged in, show only chat interface
