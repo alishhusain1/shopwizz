@@ -63,12 +63,12 @@ export interface SearchHistoryEntry {
 }
 
 export interface SearchResult {
-  asin: string
-  title: string
-  price: number
-  brand: string
-  rating: number
-  imageUrl: string
-  affiliateUrl: string
-  clickedAt?: string
+  product_id: string;
+  title: string;
+  price: string;
+  imageUrl: string;
+  rating: number;
+  reviews: number;
+  buyUrl: string;
+  clickedAt?: string;
 }

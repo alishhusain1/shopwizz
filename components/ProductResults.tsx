@@ -60,7 +60,7 @@ export default function ProductGrid({
       {/* Product Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {products.map((product) => (
-          <ProductCard key={product.asin} product={product} onClick={() => onProductClick(product.asin)} />
+          <ProductCard key={product.product_id} product={product} onClick={() => onProductClick(product.product_id)} />
         ))}
       </div>
 
@@ -69,13 +69,13 @@ export default function ProductGrid({
         <h3 className="text-xl font-bold text-white">Top Selections:</h3>
         <div className="space-y-3">
           {products.slice(0, 3).map((product, index) => (
-            <div key={product.asin} className="flex items-start space-x-3">
+            <div key={product.product_id} className="flex items-start space-x-3">
               <div className="w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
                 <span className="text-white text-sm font-bold">{index + 1}</span>
               </div>
               <div>
                 <h4 className="text-white font-medium">{product.title}:</h4>
-                <p className="text-gray-300 text-sm">{product.whyBuy}</p>
+                <p className="text-gray-300 text-sm">{product.highlights[0] || product.features[0]?.text || ""}</p>
               </div>
             </div>
           ))}
@@ -107,20 +107,27 @@ function ProductCard({ product, onClick }: ProductCardProps) {
     ))
   }
 
+  const image = product.media.find(m => m.type === "image")?.link || "/placeholder.svg"
+  const price = product.typical_prices.shown_price || product.prices[0] || "N/A"
+  const reviews = product.reviews || 0
+  const rating = product.rating || 0
+  const buyLink = Object.values(product.sizes)[0]?.link || "#"
+  const badge = product.extensions[0] || product.highlights[0] || null
+
   return (
     <div
       className="bg-gray-800 rounded-lg overflow-hidden hover:bg-gray-750 transition-colors group cursor-pointer"
       onClick={onClick}
     >
       <div className="relative">
-        {product.badge && (
+        {badge && (
           <div className="absolute top-3 left-3 z-10">
-            <span className="px-2 py-1 bg-gray-700 text-white text-xs rounded-full">{product.badge}</span>
+            <span className="px-2 py-1 bg-gray-700 text-white text-xs rounded-full">{badge}</span>
           </div>
         )}
         <div className="aspect-square relative overflow-hidden">
           <img
-            src={product.imageUrl || "/placeholder.svg"}
+            src={image}
             alt={product.title}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           />
@@ -131,21 +138,20 @@ function ProductCard({ product, onClick }: ProductCardProps) {
         <h3 className="font-medium text-white line-clamp-2 leading-tight">{product.title}</h3>
 
         <div className="flex items-center space-x-2">
-          <div className="flex items-center space-x-1">{renderStars(product.avgRating)}</div>
-          <span className="text-sm text-yellow-400 font-medium">{product.avgRating.toFixed(1)}</span>
-          <span className="text-xs text-gray-400">({product.reviewCount.toLocaleString()})</span>
+          <div className="flex items-center space-x-1">{renderStars(rating)}</div>
+          <span className="text-sm text-yellow-400 font-medium">{rating.toFixed(1)}</span>
+          <span className="text-xs text-gray-400">({reviews.toLocaleString()})</span>
         </div>
 
         <div className="flex items-center justify-between">
           <div>
-            <span className="text-xl font-bold text-white">${product.price.toFixed(2)}</span>
-            <p className="text-xs text-gray-400">{product.brand}</p>
+            <span className="text-xl font-bold text-white">{price}</span>
           </div>
 
           <button
-            onClick={(e) => {
+            onClick={e => {
               e.stopPropagation()
-              window.open(product.affiliateUrl, "_blank")
+              window.open(buyLink, "_blank")
             }}
             className="px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded text-sm font-medium transition-colors flex items-center space-x-1"
           >

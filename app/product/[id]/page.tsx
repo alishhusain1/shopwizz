@@ -21,33 +21,46 @@ export default function ProductDetailPage() {
   useEffect(() => {
     // Simulate fetching product details
     const mockProduct: Product = {
-      asin: params.id as string,
-      title: "Amazon Essentials Men's Slim-Fit Crewneck T-Shirt 2-Pack",
-      imageUrl: "/placeholder.svg?height=500&width=500",
-      price: 10.32,
-      brand: "Amazon Essentials",
-      reviewCount: 6,
-      avgRating: 5.0,
-      affiliateUrl: "https://amazon.com/dp/B077Z8NQRX?tag=shopwizz-20",
-      aiRating: 5.0,
-      whyBuy:
-        "The Amazon Essentials Men's Slim-Fit Crewneck T-Shirt 2-Pack offers a budget-friendly option for those seeking comfortable, everyday wear. Its slim fit and lightweight fabric make it suitable for layering or standalone use, and the tagless design enhances comfort.",
-      badge: "Best Value Pack",
-      features: ["Slim fit design", "Soft cotton blend", "2-pack value", "Tagless comfort"],
-      pros: ["Great value for money", "Comfortable fit", "Quality fabric", "Versatile styling"],
-      cons: ["Limited color options", "Slim fit may not suit all body types", "May shrink after washing"],
-      images: [
-        "/placeholder.svg?height=500&width=500",
-        "/placeholder.svg?height=500&width=500",
-        "/placeholder.svg?height=500&width=500",
-        "/placeholder.svg?height=500&width=500",
+      product_id: params.id as string,
+      title: "Global Brand Men's Slim-Fit Crewneck T-Shirt 2-Pack",
+      prices: ["$10.32", "$12.90"],
+      conditions: ["New"],
+      typical_prices: {
+        low: "$10.32",
+        high: "$12.90",
+        shown_price: "$10.32"
+      },
+      reviews: 6,
+      rating: 5.0,
+      extensions: ["Best Value Pack"],
+      description: "A global brand's short sleeve T-Shirts, slim-fit, crewneck, pack of 2.",
+      media: [
+        { type: "image", link: "/placeholder.svg?height=500&width=500" },
+        { type: "image", link: "/placeholder.svg?height=500&width=500" },
+        { type: "image", link: "/placeholder.svg?height=500&width=500" },
+        { type: "image", link: "/placeholder.svg?height=500&width=500" }
       ],
-      description: "Amazon Essentials Men's Short Sleeve T-Shirts, Slim-Fit, Crewneck, Pack of 2",
-      shipping: "$6.99 delivery, 30-day returns",
-      variants: [
-        { price: 10.32, description: "Amazon Essentials Men's Slim-Fit Crewneck T-Shirt 2-Pack" },
-        { price: 12.9, description: "Amazon Essentials Men's Slim-Fit Crewneck T-Shirt 2-Pack" },
-      ],
+      sizes: {
+        "M": {
+          link: "https://example.com/product/123?size=M",
+          product_id: "123-M",
+          serpapi_link: "https://serpapi.com/product/123-M",
+          selected: true
+        },
+        "L": {
+          link: "https://example.com/product/123?size=L",
+          product_id: "123-L",
+          serpapi_link: "https://serpapi.com/product/123-L",
+          selected: false
+        }
+      },
+      highlights: ["Slim fit design", "Soft cotton blend", "2-pack value", "Tagless comfort"],
+      features: [
+        { name: "Slim fit design", text: "Modern slim fit for versatile styling." },
+        { name: "Soft cotton blend", text: "Comfortable and breathable fabric." },
+        { name: "2-pack value", text: "Great value for money." },
+        { name: "Tagless comfort", text: "No itchy tags for all-day comfort." }
+      ]
     }
     setProduct(mockProduct)
 
@@ -56,23 +69,21 @@ export default function ProductDetailPage() {
       setAiLoading(true)
       setAiError("")
       try {
-        const prompt = `You are an expert product analyst. Given the following product details, generate two outputs:\n1. A concise, persuasive summary (max 100 words) for the section 'Why you might like this'.\n2. A short analysis of what verified buyers are saying, grouped by themes (e.g., Shrinkage, Neckline Style, Fit), for the section 'What people are saying'.\n\nProduct details: Title: ${mockProduct.title}, Brand: ${mockProduct.brand}, Price: $${mockProduct.price}, Features: ${mockProduct.features?.join(", ")}, Pros: ${mockProduct.pros?.join(", ")}, Cons: ${mockProduct.cons?.join(", ")}, Description: ${mockProduct.description}`
+        const prompt = `You are an expert product analyst. Given the following product details, generate two outputs:\n1. A concise, persuasive summary (max 100 words) for the section 'Why you might like this'.\n2. A short analysis of what verified buyers are saying, grouped by themes (e.g., Shrinkage, Neckline Style, Fit), for the section 'What people are saying'.\n\nProduct details: ${JSON.stringify(mockProduct)}`
         const messages = [
           { role: "system" as "assistant", content: "You are a helpful AI shopping assistant." },
           { role: "user" as "user", content: prompt },
         ]
         const response = await callChatGPT(messages)
-        // Expecting the AI to return a response with two sections separated by a delimiter
-        // e.g., 'Why you might like this: ...\n\nWhat people are saying: ...'
         const content = response.choices?.[0]?.message?.content || ""
         const [summary, analysis] = content.split(/\n\n|\n(?=What people are saying)/i)
         setAiSummary(summary?.replace(/^Why you might like this:/i, "").trim() || "")
         setAiAnalysis(analysis?.replace(/^What people are saying:/i, "").trim() || "")
-      } catch (err) {
+      } catch {
         setAiError("Failed to generate AI summary. Showing default content.")
-        setAiSummary(mockProduct.whyBuy)
+        setAiSummary("A global brand's slim-fit crewneck T-shirt 2-pack offers comfort, value, and style for everyday wear.")
         setAiAnalysis(
-          `Shrinkage: Approximately 30% of users reported minimal shrinkage after washing, with some stating that the shirts shrunk down a size.\n\nNeckline Style: 67% of users praised the neckline style, but 33% found it too tight or uncomfortable after washing.\n\nFit: 70% of users appreciated the slim fit, noting it was suitable for those with athletic builds.`
+          `Fit: Most users appreciate the slim fit and comfort.\n\nValue: Great value for a 2-pack.\n\nFabric: Soft and breathable.`
         )
       } finally {
         setAiLoading(false)
@@ -101,6 +112,9 @@ export default function ProductDetailPage() {
     ))
   }
 
+  const images = product.media.filter(m => m.type === "image").map(m => m.link)
+  const selectedSize = Object.values(product.sizes).find(s => s.selected) || Object.values(product.sizes)[0]
+
   return (
     <div className="min-h-screen bg-gray-900 text-white">
       <Header />
@@ -120,15 +134,15 @@ export default function ProductDetailPage() {
           <div className="space-y-4">
             <div className="aspect-square bg-gray-800 rounded-lg overflow-hidden">
               <img
-                src={product.images?.[selectedImage] || product.imageUrl}
+                src={images[selectedImage] || "/placeholder.svg?height=500&width=500"}
                 alt={product.title}
                 className="w-full h-full object-cover"
               />
             </div>
 
-            {product.images && (
+            {images.length > 1 && (
               <div className="flex space-x-2 overflow-x-auto">
-                {product.images.map((image, index) => (
+                {images.map((image, index) => (
                   <button
                     key={index}
                     onClick={() => setSelectedImage(index)}
@@ -152,17 +166,17 @@ export default function ProductDetailPage() {
             <div>
               <h1 className="text-3xl font-bold text-white mb-2">{product.title}</h1>
               <div className="flex items-center space-x-2 mb-4">
-                <div className="flex items-center space-x-1">{renderStars(product.avgRating)}</div>
-                <span className="text-yellow-400 font-medium">{product.avgRating.toFixed(1)}</span>
-                <span className="text-gray-400">({product.reviewCount})</span>
+                <div className="flex items-center space-x-1">{renderStars(product.rating)}</div>
+                <span className="text-yellow-400 font-medium">{product.rating.toFixed(1)}</span>
+                <span className="text-gray-400">({product.reviews})</span>
               </div>
-              <p className="text-gray-400">{product.brand}</p>
+              {product.extensions.length > 0 && <p className="text-gray-400">{product.extensions[0]}</p>}
             </div>
 
             {/* Price and Buy Section */}
             <div className="bg-gray-800 rounded-lg p-6 space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-3xl font-bold text-white">${product.price.toFixed(2)}</span>
+                <span className="text-3xl font-bold text-white">{product.typical_prices.shown_price}</span>
                 <div className="flex space-x-2">
                   <button className="p-2 text-gray-400 hover:text-white transition-colors">
                     <Heart className="w-5 h-5" />
@@ -173,77 +187,70 @@ export default function ProductDetailPage() {
                 </div>
               </div>
 
-              <p className="text-sm text-gray-400">{product.shipping}</p>
-
               <a
-                href={product.affiliateUrl}
+                href={selectedSize?.link}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 px-6 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2"
               >
-                <span>Buy Now on Amazon</span>
+                <span>Buy Now</span>
                 <ExternalLink className="w-5 h-5" />
               </a>
             </div>
 
             {/* AI Analysis */}
-            <div className="bg-gray-800 rounded-lg p-6 space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-white">Why you might like this</h3>
-                <button
-                  onClick={() => setShowAnalysis(!showAnalysis)}
-                  className="p-1 text-gray-400 hover:text-white transition-colors"
-                >
-                  <Info className="w-5 h-5" />
-                </button>
-              </div>
-
+            <div className="bg-gray-800 rounded-lg p-6">
+              <h3 className="text-lg font-semibold text-white mb-4">Why you might like this</h3>
               {aiLoading ? (
-                <p className="text-gray-400 animate-pulse">Generating summary...</p>
+                <div className="text-gray-400">Generating summary...</div>
               ) : aiError ? (
-                <p className="text-red-400">{aiError}</p>
+                <div className="text-red-400">{aiError}</div>
               ) : (
-                <p className="text-gray-300">{aiSummary}</p>
+                <div className="text-gray-300 whitespace-pre-line">{aiSummary}</div>
               )}
-
-              {showAnalysis && (
-                <div className="space-y-4 pt-4 border-t border-gray-700">
-                  <div>
-                    <h4 className="font-medium text-white mb-2">What people are saying</h4>
-                    {aiLoading ? (
-                      <p className="text-gray-400 animate-pulse">Generating analysis...</p>
-                    ) : (
-                      <div className="space-y-3 text-sm text-gray-300 whitespace-pre-line">{aiAnalysis}</div>
-                    )}
-                  </div>
-                </div>
+            </div>
+            <div className="bg-gray-800 rounded-lg p-6">
+              <h3 className="text-lg font-semibold text-white mb-4">What people are saying</h3>
+              {aiLoading ? (
+                <div className="text-gray-400">Generating analysis...</div>
+              ) : aiError ? (
+                <div className="text-red-400">{aiError}</div>
+              ) : (
+                <div className="text-gray-300 whitespace-pre-line">{aiAnalysis}</div>
               )}
             </div>
 
-            {/* Features */}
-            {product.features && (
+            {/* Key Features */}
+            {product.features.length > 0 && (
               <div className="bg-gray-800 rounded-lg p-6">
                 <h3 className="text-lg font-semibold text-white mb-4">Key Features</h3>
                 <ul className="space-y-2">
                   {product.features.map((feature, index) => (
                     <li key={index} className="flex items-center space-x-2 text-gray-300">
                       <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                      <span>{feature}</span>
+                      <span>{feature.name}: {feature.text}</span>
                     </li>
                   ))}
                 </ul>
               </div>
             )}
 
-            {/* Variants */}
-            {product.variants && (
+            {/* Available Options */}
+            {Object.keys(product.sizes).length > 0 && (
               <div className="bg-gray-800 rounded-lg p-6">
                 <h3 className="text-lg font-semibold text-white mb-4">Available Options</h3>
                 <div className="space-y-3">
-                  {product.variants.map((variant, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-gray-700 rounded-lg">
-                      <span className="text-gray-300">{variant.description}</span>
-                      <span className="text-white font-medium">${variant.price.toFixed(2)}</span>
+                  {Object.entries(product.sizes).map(([size, option]) => (
+                    <div key={option.product_id} className="flex items-center justify-between p-3 bg-gray-700 rounded-lg">
+                      <span className="text-gray-300">{size}</span>
+                      <a
+                        href={option.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-white font-medium hover:underline"
+                      >
+                        {option.link}
+                      </a>
                     </div>
                   ))}
                 </div>

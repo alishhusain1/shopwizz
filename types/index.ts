@@ -1,25 +1,38 @@
+export interface ProductMedia {
+  type: string; // e.g., "image", "video"
+  link: string;
+}
+
+export interface ProductFeature {
+  name: string;
+  text: string;
+}
+
+export interface ProductSizeOption {
+  link: string;
+  product_id: string;
+  serpapi_link: string;
+  selected: boolean;
+}
+
 export interface Product {
-  asin: string
-  title: string
-  imageUrl: string
-  price: number
-  brand: string
-  reviewCount: number
-  avgRating: number
-  affiliateUrl: string
-  aiRating: number
-  whyBuy: string
-  badge?: string
-  features?: string[]
-  pros?: string[]
-  cons?: string[]
-  images?: string[]
-  description?: string
-  shipping?: string
-  variants?: Array<{
-    price: number
-    description: string
-  }>
+  product_id: string;
+  title: string;
+  prices: string[];
+  conditions: string[];
+  typical_prices: {
+    low: string;
+    high: string;
+    shown_price: string;
+  };
+  reviews: number;
+  rating: number;
+  extensions: string[];
+  description: string;
+  media: ProductMedia[];
+  sizes: Record<string, ProductSizeOption>;
+  highlights: string[];
+  features: ProductFeature[];
 }
 
 export interface SearchFilters {

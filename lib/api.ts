@@ -21,17 +21,25 @@ export async function callChatGPT(messages: ChatMessage[], options: Record<strin
     accessToken = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
   }
 
-  const res = await fetch('https://aoiftyzquultpxzphdfp.functions.supabase.co/openai-chat-user', {
+  // Route to correct endpoint
+  const endpoint = options.product_id
+    ? 'https://aoiftyzquultpxzphdfp.functions.supabase.co/open-ai-product-sum'
+    : 'https://aoiftyzquultpxzphdfp.functions.supabase.co/openai-chat-user';
+
+  const res = await fetch(endpoint, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${accessToken}`,
     },
     body: JSON.stringify({
-      messages,
       ...options,
+      messages,
     }),
   });
-  if (!res.ok) throw new Error('OpenAI chat function error');
+  if (!res.ok) {
+    const error = await res.text();
+    throw new Error(error || 'OpenAI function error');
+  }
   return res.json();
 } 

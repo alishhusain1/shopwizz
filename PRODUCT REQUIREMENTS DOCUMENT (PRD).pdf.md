@@ -1,210 +1,222 @@
-# PRODUCT REQUIREMENTS DOCUMENT (PRD) 
+# PRODUCT REQUIREMENTS DOCUMENT (PRD)
 
-# Product Name: ShopWizz.ai 
+## Product Name: ShopWizz.ai
 
-Version: MVP v1.0 
+**Version:** MVP v1.1 – Global Internet Search
 
-# Overview:
+--- 
 
-ShopWizz.ai is a responsive web application (desktop, laptop, tablet, mobile) with best-in-class mobile optimization, offering AI-powered personal shopping assistance primarily on Amazon. Users navigate to the site, upload images, enter text, or use voice prompts to describe desired products. Leveraging GPT-4 and ElevenLabs voice APIs, ShopWizz.ai returns ranked Amazon product links with embedded affiliate tags, AI-generated star ratings, and concise “Why buy” summaries. Customers filter results by price, brand, quality, reviews, shipping time, and pickup availability. Revenue is earned solely via Amazon Associates affiliate partnerships. 
+## Overview 
 
-Target User: 
+**ShopWizz.ai** is a fully responsive web application (desktop, laptop, tablet, mobile) offering AI-powered personal shopping assistance across the entire internet. Users navigate to the site, upload images, enter text, or use voice prompts to describe desired products. Leveraging GPT-4 and ElevenLabs voice APIs, ShopWizz.ai queries Google Product results via SerpAPI, returning ranked product links from across the web with embedded affiliate tags, AI-generated star ratings, and concise “Why buy” summaries. Customers filter results by price, brand, quality,reviews, shipping time, and pickup availability. Revenue is earned via affiliate partnerships embedded in all returned URLs. 
 
-• Primary user: Online shoppers on desktop or mobile seeking personalized Amazon product discovery without switching tabs. 
+## Target User 
 
-• Secondary users (future): Merchants, Support Agents, Super Admins.
+* **Primary user:** Online shoppers on any device seeking personalized product discovery without switching between multiple retailer sites. 
 
-## Goal of MVP: 
+* **Secondary users (future):** Merchants, Support Agents, Super Admins.
 
-### ●​ Success Criteria:​
+## Goal of MVP 
 
-1.​ Fully responsive web UI optimized for mobile, tablet, and desktop: chat widget and filters adapt to screen size.​
+**Success Criteria:** 
 
-2.​ End-to-end conversational search (image/text/voice) → ranked Amazon results → affiliate links.​
+1. Fully responsive web UI optimized for mobile, tablet, and desktop: chat widget and filters adapt to screen size. 
 
-3.​ Core filters functional and persisting per anonymous session (localStorage) and permanently for logged-in users (Supabase).​
+2. End-to-end conversational search (image/text/voice) → global product results → affiliate links.
 
-4.​ Optional signup prompt to save search/check-out history via Supabase.
+3. Core filters functional and persisting per anonymous session (localStorage) and permanently for logged-in users (Supabase). 
 
-5.​ Affiliate tagging via Amazon Associates on all returned links.
+4. Optional signup prompt to save search/check-out history via Supabase.
 
-### ●​ Out of Scope:
+5. Affiliate tagging embedded in all returned URLs for revenue tracking.
 
- • Support for non-Amazon retailers.
+**Out of Scope:**
 
- • In-app cart assembly or direct payment handling.
+* In-app cart assembly or direct payment handling.
 
- • Mobile apps, merchant dashboards, advanced admin features.
+* Mobile apps, merchant dashboards, advanced admin features.
 
- • Social sharing or loyalty programs.
+* Social sharing or loyalty programs.
 
-# CORE FUNCTIONAL REQUIREMENTS (DO NOT SKIP) 
+---
 
-# 1.​ Authentication & Session
+## CORE FUNCTIONAL REQUIREMENTS (DO NOT SKIP) 
 
- • Anonymous Default: Users immediately access chat via text, voice, or image without signing up.​
+### 1. Authentication & Session 
 
- • Optional Signup Prompt: Under chat input: “Save your search history? [Sign up]”triggers Supabase Auth modal.​
+* **Anonymous Default:** Users immediately access chat via text, voice, or image without signing up. 
 
- • Must include: email/password registration, email verification, forgot password. OAuth optional later.​
+* **Optional Signup Prompt:** Under chat input: “Save your search history? \[Sign up]” triggers Supabase Auth modal. 
 
- • Guardrail: Signup optional; core features never blocked.
+* Must include: email/password registration, email verification, forgot password. OAuth optional later. 
 
-# 2.​ Responsive UI / Main Interface​
+* **Guardrail:** Signup optional; core features never blocked.
 
- • Layout: Single-page app built in Next.js with Tailwind CSS.
+### 2. Responsive UI / Main Interface 
 
- • Chat Widget Placement:
+* **Layout:** Single-page app built in Next.js with Tailwind CSS.
 
-○​ Desktop/tablet: fixed right-side panel (width: 400px).
+* **Chat Widget Placement:**
 
-○​ Mobile: bottom sheet full-width.​
+ * Desktop/tablet: fixed right-side panel (width: 400px).
 
- • Widget Elements:​
+ * Mobile: bottom sheet full-width.
 
-○​ Text input “Ask anything.”
+* **Widget Elements:**
 
-○​ Image upload button.
+ * Text input “Ask anything.” 
 
-○​ Voice record button (ElevenLabs STT).
+ * Image upload button.
 
-○​ Recommended prompts below input.
+ * Voice record button (ElevenLabs STT).
 
-○​ Filters toggle collapsible section (price, brand, quality, reviews, shipping, pickup).
+ * Recommended prompts below input.
 
-○​ Signup prompt link.
+ * Filters toggle collapsible section (price, brand, quality, reviews, shipping, pickup).
 
-## ○​ Voice Chat Toggle to open floating voice panel.
+ * Signup prompt link.
 
-##  • Adaptive Behavior:​
+ * Voice Chat Toggle to open floating voice panel.
 
-○​ Collapse filters by default on screens &lt;768px.
+* **Adaptive Behavior:** 
 
-○​ Ensure readable font sizes and tap targets ≥44px.
+ * Collapse filters by default on screens &lt;768px.
 
- • Load Data: from localStorage for anonymous, Supabase for registered.
+ * Ensure readable font sizes and tap targets ≥44px.
 
-# 3.​ Feature Modules​
+* **Load Data:** from localStorage for anonymous, Supabase for registered.
 
- 3.1 Chat & Input Module​
+# ### 3. Feature Modules
 
- • Inputs: textPrompt, voiceBlob, imageFile.
+#### 3.1 Chat & Input Module
 
- • Validation: ≥1 input; file &lt;10 MB; text ≤500 chars.
+* **Inputs:** textPrompt, voiceBlob, imageFile.
 
- • Output: searchQuery object.
+* **Validation:** ≥1 input; file &lt;10 MB; text ≤500 chars.
 
-## 3.2 AI Processing Module
+* **Output:** `searchQuery` object.
 
-• Use OpenAI GPT-4 API to parse inputs into parsedQuery JSON.
+# #### 3.2 AI Processing Module
 
-• ElevenLabs STT for voice transcription and TTS for response audio.
+* Use OpenAI GPT-4 API to parse inputs into `parsedQuery` JSON.
 
-3.3 Amazon Product API Module 
+* ElevenLabs STT for voice transcription and TTS for response audio.
 
-• Query Amazon Product Advertising API with parsedQuery + filters.
+# #### 3.3 Global Product Lookup Module
 
-• Output: productItems[] with asin, title, imageUrl, price, brand, reviewCount, avgRating,affiliateUrl. 
+* Query Google Product Search via SerpAPI using `parsedQuery` + filters.
 
-• Validation: exclude items missing price or image.
+* **Input:** keywords, imageTags, voiceTranscript + filter parameters.
 
-## 3.4 Results Display Module
+* **Output:** `productItems[]` with fields: `title`, `imageUrl`, `price`, `brand`, `reviewCount`,`avgRating`, `affiliateUrl`, `sourceDomain`. 
 
-• Render vertical list of cards:
+* **Validation:** exclude items missing price or image.
 
-- Image (200×200), title (≤60 chars), AI star rating + “Why buy” (≤100 chars), price, “Buy on Amazon” button → affiliateUrl. 
+#### 3.4 Results Display Module
 
-• Pagination/infinite scroll: 10 items per load.
+* Render vertical list or responsive grid of product cards:
 
-• For mobile, use swipe gestures for card navigation.
+ * Image (200×200), title (≤60 chars), AI star rating + “Why buy” (≤100 chars), price, full-width purple “Buy Now” button linking to `affiliateUrl`. 
 
-## 3.5 Voice Chat Module 
+* Pagination/infinite scroll: 10–20 items per load.
 
-• Voice Input: record via widget mic; send to ElevenLabs STT. 
+* Mobile: vertical scroll; no swipe gestures required.
 
-• Voice Output: render response audio via ElevenLabs TTS in floating panel.
+# #### 3.5 Voice Chat Module 
 
-• UI Controls: play/pause, mic mute, close panel.
+* **Voice Input:** record via widget mic; send to ElevenLabs STT.
 
-• Guardrail: respect device mute settings.
+* **Voice Output:** render response audio via ElevenLabs TTS in floating panel.
 
-3.6 Revenue & Monetization Module 
+* **UI Controls:** play/pause, mic mute, close panel.
 
-### • Amazon Associates: 
+* **Guardrail:** respect device mute settings.
 
-- Append tag=&lt;associateTag&gt; parameter to affiliateUrl. 
+#### 3.6 Revenue & Monetization Module
 
-- Comply with Associates Program TOS (link format, disclosure banner).
+* **Affiliate Integration:**
 
-# 4.​ Settings / Configurations
+ * Append relevant affiliate tag or referral parameter to each `affiliateUrl`.
 
- • Filters: price range, brandList, minRating, minReviewCount, maxShippingDays,pickupAvailability.​
+ * Ensure compliance with each affiliate program’s TOS (link formatting, disclosures).
 
- • Voice Chat settings: STT/TTS toggle, playback volume.
+# ### 4. Settings / Configurations
 
- • Save preferences: anonymous → localStorage; registered → Supabase on Save.
+* **Filters:** price range, brandList, minRating, minReviewCount, maxShippingDays,pickupAvailability. 
 
- • Guardrail: explicit Save click required.
+* **Voice Chat settings:** STT/TTS toggle, playback volume.
 
-# 5.​ Admin Panel (future stub)
+* **Save preferences:** anonymous → localStorage; registered → Supabase on Save.
 
- • Roles: user, admin, super_admin.
+* **Guardrail:** explicit Save click required.
 
- • Planned features: user management, associateTag management, analytics dashboard.​
+### 5. Admin Panel (future stub)
 
-## NON-FUNCTIONAL REQUIREMENTS 
+* **Roles:** user, admin, super\_admin. 
 
-## • Security: 
+* **Planned features:** user management, affiliateTag management, analytics dashboard.
 
-●​ OWASP Top 10 compliance; HTTPS for API calls.
+---
 
-●​ Input sanitization to prevent XSS.​
+## NON-FUNCTIONAL REQUIREMENTS
 
-●​ JWT via Supabase for registered users; localStorage for anonymous.
+* **Security:** 
 
- • Performance:​
+ * OWASP Top 10 compliance; HTTPS for all API calls.
 
-●​ Widget and results load $<2s$  on 4G.
+ * Input sanitization to prevent XSS.
 
-●​ Debounce API calls (500ms).
+ * JWT via Supabase for registered users; localStorage for anonymous.
 
- • Responsiveness:
+* **Performance:**
 
-●​ Tailwind CSS breakpoints: mobile $(<640px)$ , tablet (641–1024px), desktop (&gt;1025px).
+ * Widget and results load &lt;2 s on 4G.
 
-●​ Ensure WCAG 2.1 AA contrast and touch target sizes.
+ * Debounce API calls (500 ms).
 
- • Data Storage:
+* **Responsiveness:** 
 
-●​ localStorage for anonymous filters and searchHistory.
+ * Tailwind CSS breakpoints: mobile (&lt;640 px), tablet (641–1024 px), desktop (&gt;1025 px).
 
-●​ Supabase PostgreSQL: users table (UUID PK, email, password_hash, role, preferences JSON, searchHistory JSON, timestamps).​
+ * WCAG 2.1 AA contrast; 44px touch targets.
 
-## GUARDRAILS FOR AI/DEVS (STRICT) 
+* **Data Storage:**
 
-• Do not change variable/field names.
+ * `localStorage` for anonymous filters and searchHistory.
 
-• Do not assume missing logic; clarify before coding.
+ * Supabase PostgreSQL: `users` table (UUID PK, email, password\_hash, role, preferences JSON, searchHistory JSON, timestamps). 
 
-• No placeholders unless marked. 
+---
 
-• Do not alter UI/UX flows without approval.
+# ## GUARDRAILS FOR AI/DEVS (STRICT) 
 
-• Follow component naming and order exactly.
+* Do not change variable/field names.
 
-• Keep implementation modular and DRY. 
+* Do not assume missing logic; clarify before coding.
 
-$$\text {TOOLS+STACK}$$
+* No placeholders unless marked. 
 
-• Frontend: Next.js (React) $+$  Tailwind CSS 
+* Do not alter UI/UX flows without approval.
 
-• Backend: Supabase (Auth, Postgres)
+* Follow component naming and order exactly.
 
-• AI: OpenAI GPT-4 API; ElevenLabs STT/TTS 
+* Keep implementation modular and DRY.
 
-• Amazon API: Amazon Product Advertising API 
+---
 
-·Hosting: Vercel for frontend; Supabase for backend services
+# ## TOOLS & STACK 
 
-End of PRD
+* **Frontend:** Next.js (React) + Tailwind CSS
+
+* **Backend:** Supabase (Auth, Postgres)
+
+* **AI:** OpenAI GPT-4 API; ElevenLabs STT/TTS
+
+* **Product Search API:** SerpAPI Google Product Search
+
+* **Hosting:** Vercel for frontend; Supabase Functions for backend
+
+---
+
+*End of PRD*
 

@@ -15,13 +15,13 @@ export async function saveSearchToHistory(
     query,
     filters,
     results: products.map((product) => ({
-      asin: product.asin,
+      product_id: product.product_id,
       title: product.title,
-      price: product.price,
-      brand: product.brand,
-      rating: product.avgRating,
-      imageUrl: product.imageUrl,
-      affiliateUrl: product.affiliateUrl,
+      price: product.typical_prices.shown_price || product.prices[0] || "N/A",
+      imageUrl: product.media.find(m => m.type === "image")?.link || "",
+      rating: product.rating,
+      reviews: product.reviews,
+      buyUrl: Object.values(product.sizes)[0]?.link || "#",
     })),
     timestamp: new Date().toISOString(),
     resultCount: products.length,
@@ -58,7 +58,7 @@ export function clearLocalSearchHistory() {
   }
 }
 
-export async function trackProductClick(userId: string | null, searchId: string, productAsin: string) {
+export async function trackProductClick(userId: string | null, searchId: string, productId: string) {
   const timestamp = new Date().toISOString()
 
   if (userId) {
@@ -77,7 +77,7 @@ export async function trackProductClick(userId: string | null, searchId: string,
         return {
           ...entry,
           results: entry.results.map((result: SearchResult) =>
-            result.asin === productAsin ? { ...result, clickedAt: timestamp } : result,
+            result.product_id === productId ? { ...result, clickedAt: timestamp } : result,
           ),
         }
       }
@@ -98,8 +98,8 @@ export async function trackProductClick(userId: string | null, searchId: string,
       if (entry.id === searchId) {
         return {
           ...entry,
-          results: entry.results.map((result) =>
-            result.asin === productAsin ? { ...result, clickedAt: timestamp } : result,
+          results: entry.results.map((result: SearchResult) =>
+            result.product_id === productId ? { ...result, clickedAt: timestamp } : result,
           ),
         }
       }
