@@ -10,7 +10,7 @@ import { useAuth } from "@/contexts/AuthContext"
 import { saveSearchToHistory } from "@/lib/searchHistory"
 import EmailVerificationBanner from "./EmailVerificationBanner"
 import { useEmailVerification } from "@/hooks/useEmailVerification"
-import { callChatGPT } from "@/lib/api"
+import { callChatGPT, callChatEdgeFunction, callProductSearch } from "@/lib/api"
 
 // Simple in-memory cache for recent queries (per session)
 const productCache: { [key: string]: Product[] } = {}
@@ -22,6 +22,9 @@ interface SearchResultsLayoutProps {
   onProductClick: (productId: string) => void
   onNewSearch: (query: string) => void
 }
+
+// Add a type for chat input
+type ChatInput = string | { kind: "text"; text: string } | { kind: "image"; image: string; text?: string };
 
 export default function SearchResultsLayout({ searchQuery, onProductClick, onNewSearch }: SearchResultsLayoutProps) {
   const [products, setProducts] = useState<Product[]>([])
@@ -112,28 +115,71 @@ export default function SearchResultsLayout({ searchQuery, onProductClick, onNew
     }
   }
 
-  const handleChatMessage = async (message: string) => {
-    const newMessage = {
-      id: Date.now().toString(),
-      type: "user" as const,
-      content: message,
-      timestamp: new Date(),
+  // Update handleChatMessage to accept ChatInput
+  const handleChatMessage = async (message: ChatInput) => {
+    let newMessage: any;
+    let userQuery = "";
+    if (typeof message === "string") {
+      newMessage = {
+        id: Date.now().toString(),
+        type: "user" as const,
+        content: message,
+        timestamp: new Date(),
+      };
+      userQuery = message;
+    } else if (message.kind === "text") {
+      newMessage = {
+        id: Date.now().toString(),
+        type: "user" as const,
+        content: message.text,
+        timestamp: new Date(),
+      };
+      userQuery = message.text;
+    } else if (message.kind === "image") {
+      newMessage = {
+        id: Date.now().toString(),
+        type: "user" as const,
+        content: message.text || "[Image]",
+        timestamp: new Date(),
+        image: message.image, // Optionally store image for preview
+      };
+      userQuery = message.text || "";
     }
-    setChatMessages((prev) => [...prev, newMessage])
+    setChatMessages((prev) => [...prev, newMessage]);
 
     try {
-      const chatHistory = [...chatMessages, newMessage].map((m) => ({
-        role: m.type === "user" ? "user" as const : "assistant" as const,
-        content: m.content,
-      }))
-      const response = await callChatGPT(chatHistory)
+      // Prepare payload for backend
+      let rawInput: any = {};
+      if (typeof message === "string") {
+        rawInput = { kind: "text", text: message };
+      } else if (message.kind === "text") {
+        rawInput = { kind: "text", text: message.text };
+      } else if (message.kind === "image") {
+        rawInput = { kind: "image", image: message.image };
+        if (message.text) rawInput.text = message.text;
+      }
+      // Call the Supabase Edge Function for chat (Vision model for images)
+      const response = await callChatEdgeFunction(rawInput);
       const aiResponse = {
         id: (Date.now() + 1).toString(),
         type: "ai" as const,
-        content: response.choices[0].message.content,
+        content: response.reply || response.choices?.[0]?.message?.content || "",
         timestamp: new Date(),
+      };
+      setChatMessages((prev) => [...prev, aiResponse]);
+
+      // Product search: use the user's query (userQuery)
+      if (userQuery && userQuery.trim().length > 0) {
+        setIsLoading(true);
+        try {
+          const productResults = await callProductSearch(userQuery);
+          setProducts(productResults);
+        } catch (err) {
+          setProducts([]);
+        } finally {
+          setIsLoading(false);
+        }
       }
-      setChatMessages((prev) => [...prev, aiResponse])
     } catch (err) {
       setChatMessages((prev) => [
         ...prev,
@@ -143,9 +189,9 @@ export default function SearchResultsLayout({ searchQuery, onProductClick, onNew
           content: "Sorry, something went wrong.",
           timestamp: new Date(),
         },
-      ])
+      ]);
     }
-  }
+  };
 
   // If user is logged in, show only chat interface
   if (user) {

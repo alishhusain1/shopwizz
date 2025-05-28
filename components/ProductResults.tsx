@@ -75,7 +75,11 @@ export default function ProductGrid({
               </div>
               <div>
                 <h4 className="text-white font-medium">{product.title}:</h4>
-                <p className="text-gray-300 text-sm">{product.highlights[0] || product.features[0]?.text || ""}</p>
+                <p className="text-gray-300 text-sm">{
+                  (Array.isArray(product.highlights) && product.highlights.length > 0 && product.highlights[0]) ||
+                  (Array.isArray(product.features) && product.features.length > 0 && product.features[0]?.text) ||
+                  ""
+                }</p>
               </div>
             </div>
           ))}
@@ -107,12 +111,12 @@ function ProductCard({ product, onClick }: ProductCardProps) {
     ))
   }
 
-  const image = product.media.find(m => m.type === "image")?.link || "/placeholder.svg"
-  const price = product.typical_prices.shown_price || product.prices[0] || "N/A"
-  const reviews = product.reviews || 0
-  const rating = product.rating || 0
-  const buyLink = Object.values(product.sizes)[0]?.link || "#"
-  const badge = product.extensions[0] || product.highlights[0] || null
+  const image = Array.isArray(product.media) && product.media.length > 0 && product.media[0]?.link ? product.media[0].link : "/placeholder.svg"
+  const price = product?.typical_prices?.shown_price || (Array.isArray(product.prices) && product.prices.length > 0 && product.prices[0]) || "N/A"
+  const reviews = typeof product.reviews === "number" ? product.reviews : 0
+  const rating = typeof product.rating === "number" ? product.rating : 0
+  const buyLink = product.sizes && Object.values(product.sizes)[0]?.link ? Object.values(product.sizes)[0].link : "#"
+  const badge = (Array.isArray(product.extensions) && product.extensions.length > 0 && product.extensions[0]) || (Array.isArray(product.highlights) && product.highlights.length > 0 && product.highlights[0]) || null
 
   return (
     <div

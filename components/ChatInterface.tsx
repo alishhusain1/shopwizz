@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useState, useRef, useEffect } from "react"
-import { Mic, Settings, Send, Paperclip } from "lucide-react"
+import { Settings, Send, Paperclip } from "lucide-react"
 import { useAuthModal } from "@/hooks/useAuthModal"
 import AuthModals from "./AuthModals"
 
@@ -32,14 +32,22 @@ export default function ChatInterface({
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { isOpen, mode, openModal, closeModal, changeMode } = useAuthModal()
+  const [imageBase64, setImageBase64] = useState<string | null>(null)
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null)
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages])
 
   const handleSend = () => {
-    if (inputValue.trim()) {
-      onSendMessage(inputValue.trim())
+    if (inputValue.trim() || imageBase64) {
+      if (imageBase64) {
+        onSendMessage({ kind: "image", image: imageBase64, text: inputValue.trim() })
+        setImageBase64(null)
+        setImagePreviewUrl(null)
+      } else {
+        onSendMessage({ kind: "text", text: inputValue.trim() })
+      }
       setInputValue("")
     }
   }
@@ -63,8 +71,15 @@ export default function ChatInterface({
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
-      // TODO: Implement image processing
-      console.log("Image uploaded:", file.name)
+      const reader = new FileReader()
+      reader.onload = (ev) => {
+        const result = ev.target?.result as string
+        setImagePreviewUrl(result)
+        // Remove the data:image/...;base64, prefix for backend
+        const base64 = result.split(',')[1]
+        setImageBase64(base64)
+      }
+      reader.readAsDataURL(file)
     }
   }
 
@@ -192,10 +207,16 @@ export default function ChatInterface({
                     }`}
                     title="Voice recording"
                   >
-                    <Mic className="w-4 h-4" />
                   </button>
                 </div>
               </div>
+
+              {imagePreviewUrl && (
+                <div className="flex items-center space-x-2 mt-2">
+                  <img src={imagePreviewUrl} alt="Preview" className="w-16 h-16 object-cover rounded border border-gray-500" />
+                  <button onClick={() => { setImageBase64(null); setImagePreviewUrl(null); }} className="px-2 py-1 bg-gray-600 text-white rounded">Remove</button>
+                </div>
+              )}
 
               <button
                 onClick={handleSend}
@@ -291,10 +312,16 @@ export default function ChatInterface({
                     isRecording ? "bg-purple-600 text-white" : "text-gray-400 hover:text-white"
                   }`}
                 >
-                  <Mic className="w-4 h-4" />
                 </button>
               </div>
             </div>
+
+            {imagePreviewUrl && (
+              <div className="flex items-center space-x-2 mt-2">
+                <img src={imagePreviewUrl} alt="Preview" className="w-16 h-16 object-cover rounded border border-gray-500" />
+                <button onClick={() => { setImageBase64(null); setImagePreviewUrl(null); }} className="px-2 py-1 bg-gray-600 text-white rounded">Remove</button>
+              </div>
+            )}
 
             <div className="flex items-center justify-between">
               <button className="p-2 text-gray-400 hover:text-white transition-colors">

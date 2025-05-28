@@ -4,7 +4,7 @@ import type React from "react"
 
 import { useState, useRef } from "react"
 import { useRouter } from "next/navigation"
-import { X, Mic, Paperclip, FileImage, AlertCircle, CheckCircle } from "lucide-react"
+import { X, Paperclip, FileImage, AlertCircle, CheckCircle } from "lucide-react"
 import Header from "@/components/Header"
 import SearchResultsLayout from "@/components/SearchResultsLayout"
 import AuthModals from "@/components/AuthModals"
@@ -23,15 +23,11 @@ interface UploadedImage {
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState("")
   const [hasSearched, setHasSearched] = useState(false)
-  const [isRecording, setIsRecording] = useState(false)
   const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([])
   const [isDragOver, setIsDragOver] = useState(false)
-  const [recordingTime, setRecordingTime] = useState(0)
-  const [voiceTranscript, setVoiceTranscript] = useState("")
 
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const { user, loading } = useAuth()
   const { isOpen, mode, openModal, closeModal, changeMode } = useAuthModal()
   const { needsVerification } = useEmailVerification()
@@ -43,45 +39,6 @@ export default function Home() {
 
   const handleProductClick = (productId: string) => {
     router.push(`/product/${productId}`)
-  }
-
-  // Voice Recording Functions
-  const startRecording = () => {
-    setIsRecording(true)
-    setRecordingTime(0)
-    setVoiceTranscript("")
-
-    recordingIntervalRef.current = setInterval(() => {
-      setRecordingTime((prev) => prev + 1)
-    }, 1000)
-
-    // TODO: Implement actual voice recording
-    // Simulate voice recognition after 3 seconds
-    setTimeout(() => {
-      if (recordingIntervalRef.current) {
-        stopRecording()
-        setVoiceTranscript("Find me comfortable running shoes under $100")
-      }
-    }, 3000)
-  }
-
-  const stopRecording = () => {
-    setIsRecording(false)
-    if (recordingIntervalRef.current) {
-      clearInterval(recordingIntervalRef.current)
-      recordingIntervalRef.current = null
-    }
-  }
-
-  const handleVoiceSearch = () => {
-    if (voiceTranscript.trim()) {
-      handleSearch(voiceTranscript.trim())
-    }
-  }
-
-  const clearVoiceTranscript = () => {
-    setVoiceTranscript("")
-    setRecordingTime(0)
   }
 
   // Image Upload Functions
@@ -240,28 +197,6 @@ export default function Home() {
                 )}
               </div>
 
-              {/* Voice Transcript Display */}
-              {voiceTranscript && (
-                <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-gray-400">Voice transcript:</span>
-                    <button
-                      onClick={clearVoiceTranscript}
-                      className="p-1 text-gray-400 hover:text-white transition-colors"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                  <p className="text-white mb-3">"{voiceTranscript}"</p>
-                  <button
-                    onClick={handleVoiceSearch}
-                    className="w-full px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
-                  >
-                    Search with Voice
-                  </button>
-                </div>
-              )}
-
               {/* Image Upload Preview */}
               {uploadedImages.length > 0 && (
                 <div className="bg-gray-800/50 rounded-2xl p-6 border border-gray-700">
@@ -335,56 +270,9 @@ export default function Home() {
 
               {/* Voice Search and Image Upload Controls */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Voice Recording Section */}
-                <div className="bg-gray-800/50 rounded-2xl p-6 border border-gray-700">
-                  <div className="flex items-center space-x-3 mb-4">
-                    <Mic className="w-6 h-6 text-purple-400" />
-                    <h3 className="text-lg font-semibold text-white">Voice Search</h3>
-                  </div>
-
-                  <div className="text-center space-y-4">
-                    {!isRecording ? (
-                      <>
-                        <p className="text-gray-400 text-sm mb-4">
-                          Tap to start voice search. Describe what you're looking for.
-                        </p>
-                        <button
-                          onClick={startRecording}
-                          className="w-20 h-20 bg-purple-600 hover:bg-purple-700 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-105 mx-auto"
-                        >
-                          <Mic className="w-8 h-8 text-white" />
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <p className="text-purple-400 font-medium">Listening...</p>
-                        <div className="relative mx-auto w-20 h-20">
-                          {/* Pulsing animation */}
-                          <div className="absolute inset-0 bg-purple-600 rounded-full animate-ping opacity-75"></div>
-                          <div className="absolute inset-2 bg-purple-500 rounded-full animate-pulse"></div>
-                          <button
-                            onClick={stopRecording}
-                            className="relative w-full h-full bg-purple-600 rounded-full flex items-center justify-center z-10"
-                          >
-                            <Mic className="w-8 h-8 text-white" />
-                          </button>
-                        </div>
-                        <p className="text-gray-400 text-sm">Recording: {formatTime(recordingTime)}</p>
-                        <button
-                          onClick={stopRecording}
-                          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
-                        >
-                          Stop Recording
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </div>
-
                 {/* Image Upload Section - Simplified with paperclip icon */}
                 <div className="bg-gray-800/50 rounded-2xl p-6 border border-gray-700">
                   <div className="flex items-center space-x-3 mb-4">
-                    <Paperclip className="w-6 h-6 text-purple-400" />
                     <h3 className="text-lg font-semibold text-white">Image Search</h3>
                   </div>
 

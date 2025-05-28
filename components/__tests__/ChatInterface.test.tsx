@@ -28,11 +28,10 @@ describe('ChatInterface', () => {
     expect(screen.getByText('Hi! How can I help?')).toBeInTheDocument();
   });
 
-  it('renders input area with textarea, image, mic, and send button', () => {
+  it('renders input area with textarea, image, and send button', () => {
     render(<ChatInterface {...baseProps} />);
     expect(screen.getByPlaceholderText(/ask anything about products/i)).toBeInTheDocument();
     expect(screen.getByTitle(/upload images/i)).toBeInTheDocument();
-    expect(screen.getByTitle(/voice recording/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /send/i })).toBeInTheDocument();
   });
 

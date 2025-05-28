@@ -63,3 +63,14 @@ export interface SearchQuery {
   filters: SearchFilters
   timestamp: string
 }
+
+export type ChatMessage = {
+  id: string;
+  type: "user" | "ai" | "image" | "audio";
+  content?: string;      // text or transcript
+  imageUrl?: string;     // for local preview
+  imageData?: string;    // base64 for backend
+  audioUrl?: string;     // for playback
+  audioData?: string;    // base64 for backend
+  timestamp: Date;
+};

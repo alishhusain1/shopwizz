@@ -42,4 +42,63 @@ export async function callChatGPT(messages: ChatMessage[], options: Record<strin
     throw new Error(error || 'OpenAI function error');
   }
   return res.json();
+}
+
+export async function callChatEdgeFunction(rawInput: any) {
+  // Try to get the current session's access token
+  let accessToken: string | null = null;
+  try {
+    const { data } = await supabase.auth.getSession();
+    if (data?.session?.access_token) {
+      accessToken = data.session.access_token;
+    }
+  } catch (e) {
+    // fallback below
+  }
+  // Fallback to anon key if not authenticated
+  if (!accessToken) {
+    accessToken = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+  }
+
+  const endpoint = 'https://aoiftyzquultpxzphdfp.functions.supabase.co/chat';
+  const res = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({ rawInput }),
+  });
+  if (!res.ok) {
+    const error = await res.text();
+    throw new Error(error || 'Chat edge function error');
+  }
+  return res.json();
+}
+
+export async function callProductSearch(keywords: string, filters: any = {}) {
+  let accessToken: string | null = null;
+  try {
+    const { data } = await supabase.auth.getSession();
+    if (data?.session?.access_token) {
+      accessToken = data.session.access_token;
+    }
+  } catch (e) {}
+  if (!accessToken) {
+    accessToken = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+  }
+  const endpoint = 'https://aoiftyzquultpxzphdfp.functions.supabase.co/productSearch';
+  const res = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({ keywords, filters }),
+  });
+  if (!res.ok) {
+    const error = await res.text();
+    throw new Error(error || 'Product search function error');
+  }
+  return res.json();
 } 
