@@ -39,7 +39,7 @@ export default function Header() {
                 <span className="hidden md:block text-sm text-gray-300">Welcome, {user.email}</span>
                 <button
                   onClick={handleSignOut}
-                  className="flex items-center space-x-2 px-3 py-2 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-gray-700"
+                  className="flex items-center space-x-2 px-4 py-2 bg-white/10 backdrop-blur-md text-gray-200 hover:text-white hover:bg-white/20 rounded-full shadow transition-all duration-150 font-medium hover:scale-105"
                 >
                   <LogOut className="w-4 h-4" />
                   <span className="hidden md:block">Sign Out</span>
@@ -49,13 +49,13 @@ export default function Header() {
               <>
                 <button
                   onClick={() => openModal("signin")}
-                  className="hidden md:block px-4 py-2 text-gray-300 hover:text-white transition-colors rounded-lg hover:bg-gray-700"
+                  className="hidden md:block px-5 py-2 bg-white/10 backdrop-blur-md text-gray-200 hover:text-white hover:bg-white/20 rounded-full shadow transition-all duration-150 font-medium hover:scale-105"
                 >
                   Sign In
                 </button>
                 <button
                   onClick={() => openModal("signup")}
-                  className="hidden md:block px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+                  className="hidden md:block px-6 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-full shadow font-bold transition-all duration-150 hover:scale-105"
                 >
                   Sign Up
                 </button>
@@ -64,7 +64,7 @@ export default function Header() {
 
             {/* Mobile Menu Button */}
             <button
-              className="md:hidden p-2 text-gray-400 hover:text-white transition-colors"
+              className="md:hidden p-2 bg-white/10 backdrop-blur-md text-gray-200 hover:text-white hover:bg-white/20 rounded-full shadow transition-all duration-150 hover:scale-110"
               onClick={() => setIsMenuOpen(!isMenuOpen)}
             >
               {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -81,7 +81,7 @@ export default function Header() {
                   <span className="text-sm text-gray-300">Welcome, {user.email}</span>
                   <button
                     onClick={handleSignOut}
-                    className="flex items-center space-x-2 text-gray-300 hover:text-white transition-colors"
+                    className="flex items-center space-x-2 px-4 py-2 bg-white/10 backdrop-blur-md text-gray-200 hover:text-white hover:bg-white/20 rounded-full shadow transition-all duration-150 font-medium hover:scale-105"
                   >
                     <LogOut className="w-4 h-4" />
                     <span>Sign Out</span>
@@ -94,7 +94,7 @@ export default function Header() {
                       openModal("signin")
                       setIsMenuOpen(false)
                     }}
-                    className="text-left text-gray-300 hover:text-white transition-colors"
+                    className="text-left px-5 py-2 bg-white/10 backdrop-blur-md text-gray-200 hover:text-white hover:bg-white/20 rounded-full shadow transition-all duration-150 font-medium hover:scale-105"
                   >
                     Sign In
                   </button>
@@ -103,7 +103,7 @@ export default function Header() {
                       openModal("signup")
                       setIsMenuOpen(false)
                     }}
-                    className="text-left px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+                    className="text-left px-6 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-full shadow font-bold transition-all duration-150 hover:scale-105"
                   >
                     Sign Up
                   </button>

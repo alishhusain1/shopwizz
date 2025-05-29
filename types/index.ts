@@ -33,6 +33,10 @@ export interface Product {
   sizes: Record<string, ProductSizeOption>;
   highlights: string[];
   features: ProductFeature[];
+  store?: string;
+  shipping?: string;
+  snippet?: string;
+  reviews_link?: string;
 }
 
 export interface SearchFilters {

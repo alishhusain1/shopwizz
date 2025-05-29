@@ -14,8 +14,9 @@ interface ProductGridProps {
   products: Product[]
   searchQuery: string
   isLoading: boolean
-  onProductClick: (productId: string) => void
+  onProductClick: (product: Product) => void
   chatMessages: Message[]
+  aiMessage?: Message | null
 }
 
 export default function ProductGrid(props: ProductGridProps) {

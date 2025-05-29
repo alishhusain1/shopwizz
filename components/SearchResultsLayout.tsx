@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import Header from "./Header"
 import FilterSidebar from "./FilterSidebar"
 import ChatInterface from "./ChatInterface"
@@ -19,15 +19,22 @@ const MAX_CACHE = 10
 
 interface SearchResultsLayoutProps {
   searchQuery: string
-  onProductClick: (productId: string) => void
+  onProductClick: (product: Product) => void
   onNewSearch: (query: string) => void
+  initialChatMessages?: {
+    id: string;
+    type: "user" | "ai";
+    content: string;
+    timestamp: Date;
+  }[]
+  initialProducts?: Product[]
 }
 
 // Add a type for chat input
 type ChatInput = string | { kind: "text"; text: string } | { kind: "image"; image: string; text?: string };
 
-export default function SearchResultsLayout({ searchQuery, onProductClick, onNewSearch }: SearchResultsLayoutProps) {
-  const [products, setProducts] = useState<Product[]>([])
+export default function SearchResultsLayout({ searchQuery, onProductClick, onNewSearch, initialChatMessages, initialProducts }: SearchResultsLayoutProps) {
+  const [products, setProducts] = useState<Product[]>(initialProducts || [])
   const [isLoading, setIsLoading] = useState(false)
   const [filters, setFilters] = useState<SearchFilters>({})
   const [chatMessages, setChatMessages] = useState<{
@@ -35,19 +42,28 @@ export default function SearchResultsLayout({ searchQuery, onProductClick, onNew
     type: "user" | "ai";
     content: string;
     timestamp: Date;
-  }[]>([
-    {
-      id: "1",
-      type: "ai",
-      content: `Here are some ${searchQuery.toLowerCase()} under $20, available for purchase:`,
-      timestamp: new Date(),
-    },
-  ])
+    suggestions?: any[];
+  }[]>(
+    initialChatMessages || [
+      {
+        id: "1",
+        type: "ai",
+        content: `Here are some ${searchQuery.toLowerCase()} under $20, available for purchase:`,
+        timestamp: new Date(),
+      },
+    ]
+  )
+  const initialProductsUsed = useRef(false)
 
   const { user } = useAuth()
   const { needsVerification } = useEmailVerification()
 
   useEffect(() => {
+    // Only skip fetch on first mount if initialProducts is provided
+    if (initialProducts && !initialProductsUsed.current) {
+      initialProductsUsed.current = true
+      return
+    }
     fetchProducts()
   }, [searchQuery, filters, user])
 
@@ -60,22 +76,7 @@ export default function SearchResultsLayout({ searchQuery, onProductClick, onNew
       return
     }
     try {
-      const res = await fetch(
-        "https://aoiftyzquultpxzphdfp.supabase.co/functions/v1/serpapi-product-search",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            // Optionally: "Authorization": `Bearer ${user?.access_token}`
-          },
-          body: JSON.stringify({
-            query: searchQuery,
-            filters,
-          }),
-        }
-      )
-      const data = await res.json()
-      let fetchedProducts: Product[] = data.products || []
+      let fetchedProducts: Product[] = await callProductSearch(searchQuery, filters)
       // Apply filters client-side if not supported by Edge Function
       if (filters.priceMin || filters.priceMax) {
         fetchedProducts = fetchedProducts.filter(p => {
@@ -158,21 +159,77 @@ export default function SearchResultsLayout({ searchQuery, onProductClick, onNew
         rawInput = { kind: "image", image: message.image };
         if (message.text) rawInput.text = message.text;
       }
+      // Build chat memory (last 10 messages)
+      const systemPrompt = { role: "system", content: "You are a helpful AI shopping assistant." };
+      const history = chatMessages.slice(-10).map((msg) =>
+        msg.type === "user"
+          ? { role: "user", content: msg.content }
+          : { role: "assistant", content: msg.content }
+      );
+      const messages = [systemPrompt, ...history, { role: "user", content: newMessage.content }];
       // Call the Supabase Edge Function for chat (Vision model for images)
-      const response = await callChatEdgeFunction(rawInput);
-      const aiResponse = {
-        id: (Date.now() + 1).toString(),
-        type: "ai" as const,
-        content: response.reply || response.choices?.[0]?.message?.content || "",
-        timestamp: new Date(),
-      };
-      setChatMessages((prev) => [...prev, aiResponse]);
+      const response = await callChatEdgeFunction(rawInput, messages);
+      let aiContent = response.reply || response.choices?.[0]?.message?.content || "";
+      // --- BEGIN PATCH: Robust JSON intent parsing ---
+      function extractJsonIntent(aiReply: string) {
+        try {
+          // Find the first '{' and try to parse until the matching '}'
+          const start = aiReply.indexOf('{');
+          if (start === -1) return null;
 
-      // Product search: use the user's query (userQuery)
-      if (userQuery && userQuery.trim().length > 0) {
+          // Find the matching closing brace for the JSON object
+          let openBraces = 0;
+          let end = -1;
+          for (let i = start; i < aiReply.length; i++) {
+            if (aiReply[i] === '{') openBraces++;
+            if (aiReply[i] === '}') openBraces--;
+            if (openBraces === 0) {
+              end = i + 1;
+              break;
+            }
+          }
+          if (end === -1) return null;
+
+          const jsonStr = aiReply.slice(start, end);
+          return JSON.parse(jsonStr);
+        } catch (e) {
+          console.error('Failed to parse AI intent:', aiReply, e);
+        }
+        return null;
+      }
+      const aiIntent = extractJsonIntent(aiContent);
+      let productResults: Product[] = [];
+      let searchQueryForProducts = userQuery;
+      let aiMessageObj: { id: string; type: "user" | "ai"; content: string; timestamp: Date; suggestions?: any[] };
+      if (aiIntent && aiIntent.keywords) {
+        searchQueryForProducts = aiIntent.keywords;
+        // Call chat edge function to generate a user-friendly summary
+        const summaryPrompt = `Summarize this product search intent for a user in plain English: ${JSON.stringify(aiIntent)}`;
+        const summaryResponse = await callChatEdgeFunction({ kind: "text", text: summaryPrompt });
+        const summaryText = summaryResponse.reply || summaryResponse.choices?.[0]?.message?.content || "Here are some options I found!";
+        aiMessageObj = {
+          id: (Date.now() + 1).toString(),
+          type: "ai" as const,
+          content: summaryText,
+          timestamp: new Date(),
+          suggestions: aiIntent.suggestions || []
+        };
+        setChatMessages((prev) => [...prev, aiMessageObj]);
+      } else {
+        // Log the full AI reply for debugging if parsing fails
+        console.warn('AI did not return a valid JSON intent. Full reply:', aiContent);
+        aiMessageObj = {
+          id: (Date.now() + 1).toString(),
+          type: "ai" as const,
+          content: aiContent,
+          timestamp: new Date(),
+        };
+        setChatMessages((prev) => [...prev, aiMessageObj]);
+      }
+      if (searchQueryForProducts && searchQueryForProducts.trim().length > 0) {
         setIsLoading(true);
         try {
-          const productResults = await callProductSearch(userQuery);
+          productResults = await callProductSearch(searchQueryForProducts);
           setProducts(productResults);
         } catch (err) {
           setProducts([]);
@@ -192,6 +249,9 @@ export default function SearchResultsLayout({ searchQuery, onProductClick, onNew
       ]);
     }
   };
+
+  // Find the latest AI message (summary)
+  const latestAiMessage = [...chatMessages].reverse().find(m => m.type === "ai") || null;
 
   // If user is logged in, show only chat interface
   if (user) {
@@ -236,6 +296,7 @@ export default function SearchResultsLayout({ searchQuery, onProductClick, onNew
               isLoading={isLoading}
               onProductClick={onProductClick}
               chatMessages={chatMessages}
+              aiMessage={latestAiMessage}
             />
           </div>
 

@@ -14,8 +14,9 @@ interface ProductGridProps {
   products: Product[]
   searchQuery: string
   isLoading: boolean
-  onProductClick: (productId: string) => void
+  onProductClick: (product: Product) => void
   chatMessages: Message[]
+  aiMessage?: Message | null
 }
 
 export default function ProductGrid({
@@ -24,7 +25,9 @@ export default function ProductGrid({
   isLoading,
   onProductClick,
   chatMessages,
+  aiMessage,
 }: ProductGridProps) {
+  console.log('DEBUG: aiMessage at render', aiMessage);
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -46,21 +49,21 @@ export default function ProductGrid({
     )
   }
 
-  const aiMessage = chatMessages.find((msg) => msg.type === "ai")
-
   return (
     <div className="space-y-6">
-      {/* AI Response Header */}
-      {aiMessage && (
-        <div className="bg-gray-800 rounded-lg p-4">
+      {/* AI Summary Message */}
+      {aiMessage && aiMessage.content && (
+        <div className="bg-gray-800 rounded-lg p-4 mb-2">
           <p className="text-gray-300">{aiMessage.content}</p>
         </div>
       )}
-
       {/* Product Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {products.map((product) => (
-          <ProductCard key={product.product_id} product={product} onClick={() => onProductClick(product.product_id)} />
+          <ProductCard key={product.product_id} product={product} onClick={() => {
+            localStorage.setItem('shopwizz_selected_product', JSON.stringify(product));
+            onProductClick(product);
+          }} />
         ))}
       </div>
 
@@ -117,6 +120,7 @@ function ProductCard({ product, onClick }: ProductCardProps) {
   const rating = typeof product.rating === "number" ? product.rating : 0
   const buyLink = product.sizes && Object.values(product.sizes)[0]?.link ? Object.values(product.sizes)[0].link : "#"
   const badge = (Array.isArray(product.extensions) && product.extensions.length > 0 && product.extensions[0]) || (Array.isArray(product.highlights) && product.highlights.length > 0 && product.highlights[0]) || null
+  const store = product.store || ""
 
   return (
     <div
@@ -140,6 +144,7 @@ function ProductCard({ product, onClick }: ProductCardProps) {
 
       <div className="p-4 space-y-3">
         <h3 className="font-medium text-white line-clamp-2 leading-tight">{product.title}</h3>
+        {store && <div className="text-xs text-purple-300 font-semibold">{store}</div>}
 
         <div className="flex items-center space-x-2">
           <div className="flex items-center space-x-1">{renderStars(rating)}</div>

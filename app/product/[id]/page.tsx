@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useParams, useRouter } from "next/navigation"
+import { useParams, useRouter, useSearchParams } from "next/navigation"
 import { ArrowLeft, Star, ExternalLink, Heart, Share2, Info } from "lucide-react"
 import Header from "@/components/Header"
 import type { Product } from "@/types"
@@ -10,6 +10,7 @@ import { callChatGPT } from "@/lib/api"
 export default function ProductDetailPage() {
   const params = useParams()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [product, setProduct] = useState<Product | null>(null)
   const [selectedImage, setSelectedImage] = useState(0)
   const [showAnalysis, setShowAnalysis] = useState(false)
@@ -19,57 +20,34 @@ export default function ProductDetailPage() {
   const [aiError, setAiError] = useState<string>("")
 
   useEffect(() => {
-    // Simulate fetching product details
-    const mockProduct: Product = {
-      product_id: params.id as string,
-      title: "Global Brand Men's Slim-Fit Crewneck T-Shirt 2-Pack",
-      prices: ["$10.32", "$12.90"],
-      conditions: ["New"],
-      typical_prices: {
-        low: "$10.32",
-        high: "$12.90",
-        shown_price: "$10.32"
-      },
-      reviews: 6,
-      rating: 5.0,
-      extensions: ["Best Value Pack"],
-      description: "A global brand's short sleeve T-Shirts, slim-fit, crewneck, pack of 2.",
-      media: [
-        { type: "image", link: "/placeholder.svg?height=500&width=500" },
-        { type: "image", link: "/placeholder.svg?height=500&width=500" },
-        { type: "image", link: "/placeholder.svg?height=500&width=500" },
-        { type: "image", link: "/placeholder.svg?height=500&width=500" }
-      ],
-      sizes: {
-        "M": {
-          link: "https://example.com/product/123?size=M",
-          product_id: "123-M",
-          serpapi_link: "https://serpapi.com/product/123-M",
-          selected: true
-        },
-        "L": {
-          link: "https://example.com/product/123?size=L",
-          product_id: "123-L",
-          serpapi_link: "https://serpapi.com/product/123-L",
-          selected: false
-        }
-      },
-      highlights: ["Slim fit design", "Soft cotton blend", "2-pack value", "Tagless comfort"],
-      features: [
-        { name: "Slim fit design", text: "Modern slim fit for versatile styling." },
-        { name: "Soft cotton blend", text: "Comfortable and breathable fabric." },
-        { name: "2-pack value", text: "Great value for money." },
-        { name: "Tagless comfort", text: "No itchy tags for all-day comfort." }
-      ]
+    // Try to load product from localStorage first
+    const stored = localStorage.getItem('shopwizz_selected_product');
+    if (stored) {
+      setProduct(JSON.parse(stored));
+      return;
     }
-    setProduct(mockProduct)
+    async function fetchProduct() {
+      const keywords = searchParams.get("keywords") || "";
+      if (!params.id || !keywords) return;
+      try {
+        const res = await fetch(`/functions/v1/productSearch?product_id=${encodeURIComponent(params.id as string)}&keywords=${encodeURIComponent(keywords)}`)
+        if (!res.ok) throw new Error("Product not found")
+        const data = await res.json()
+        setProduct(data)
+      } catch (err) {
+        setProduct(null)
+      }
+    }
+    fetchProduct()
+  }, [params.id, searchParams])
 
+  useEffect(() => {
     // AI summary and analysis generation
     async function fetchAISummaryAndAnalysis() {
       setAiLoading(true)
       setAiError("")
       try {
-        const prompt = `You are an expert product analyst. Given the following product details, generate two outputs:\n1. A concise, persuasive summary (max 100 words) for the section 'Why you might like this'.\n2. A short analysis of what verified buyers are saying, grouped by themes (e.g., Shrinkage, Neckline Style, Fit), for the section 'What people are saying'.\n\nProduct details: ${JSON.stringify(mockProduct)}`
+        const prompt = `You are an expert product analyst. Given the following product details, generate two outputs:\n1. A concise, persuasive summary (max 100 words) for the section 'Why you might like this'.\n2. A short analysis of what verified buyers are saying, grouped by themes (e.g., Shrinkage, Neckline Style, Fit), for the section 'What people are saying'.\n\nProduct details: ${JSON.stringify(product)}`
         const messages = [
           { role: "system" as "assistant", content: "You are a helpful AI shopping assistant." },
           { role: "user" as "user", content: prompt },
@@ -90,7 +68,7 @@ export default function ProductDetailPage() {
       }
     }
     fetchAISummaryAndAnalysis()
-  }, [params.id])
+  }, [product])
 
   if (!product) {
     return (
@@ -122,7 +100,7 @@ export default function ProductDetailPage() {
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Back Button */}
         <button
-          onClick={() => router.back()}
+          onClick={() => router.push('/shop')}
           className="flex items-center space-x-2 text-gray-400 hover:text-white transition-colors mb-6"
         >
           <ArrowLeft className="w-5 h-5" />
@@ -217,6 +195,14 @@ export default function ProductDetailPage() {
                 <div className="text-red-400">{aiError}</div>
               ) : (
                 <div className="text-gray-300 whitespace-pre-line">{aiAnalysis}</div>
+              )}
+              {product.snippet && (
+                <div className="mt-4 text-gray-200 italic">"{product.snippet}"</div>
+              )}
+              {product.reviews_link && (
+                <div className="mt-2">
+                  <a href={product.reviews_link} target="_blank" rel="noopener noreferrer" className="text-purple-400 underline">Read all reviews</a>
+                </div>
               )}
             </div>
 

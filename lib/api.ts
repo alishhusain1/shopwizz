@@ -44,36 +44,37 @@ export async function callChatGPT(messages: ChatMessage[], options: Record<strin
   return res.json();
 }
 
-export async function callChatEdgeFunction(rawInput: any) {
-  // Try to get the current session's access token
+export async function callChatEdgeFunction(rawInput: any, messages?: any[]) {
   let accessToken: string | null = null;
   try {
     const { data } = await supabase.auth.getSession();
     if (data?.session?.access_token) {
       accessToken = data.session.access_token;
     }
-  } catch (e) {
-    // fallback below
-  }
-  // Fallback to anon key if not authenticated
+  } catch (e) {}
   if (!accessToken) {
     accessToken = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
   }
-
   const endpoint = 'https://aoiftyzquultpxzphdfp.functions.supabase.co/chat';
-  const res = await fetch(endpoint, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${accessToken}`,
-    },
-    body: JSON.stringify({ rawInput }),
-  });
-  if (!res.ok) {
-    const error = await res.text();
-    throw new Error(error || 'Chat edge function error');
+  try {
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ rawInput, messages }),
+    });
+    if (!res.ok) {
+      const error = await res.text();
+      console.error('Chat edge function error:', error);
+      throw new Error(error || 'Chat edge function error');
+    }
+    return res.json();
+  } catch (err) {
+    console.error('Chat edge function fetch failed:', err);
+    throw err;
   }
-  return res.json();
 }
 
 export async function callProductSearch(keywords: string, filters: any = {}) {
@@ -88,17 +89,23 @@ export async function callProductSearch(keywords: string, filters: any = {}) {
     accessToken = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
   }
   const endpoint = 'https://aoiftyzquultpxzphdfp.functions.supabase.co/productSearch';
-  const res = await fetch(endpoint, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${accessToken}`,
-    },
-    body: JSON.stringify({ keywords, filters }),
-  });
-  if (!res.ok) {
-    const error = await res.text();
-    throw new Error(error || 'Product search function error');
+  try {
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ keywords, filters }),
+    });
+    if (!res.ok) {
+      const error = await res.text();
+      console.error('Product search function error:', error);
+      throw new Error(error || 'Product search function error');
+    }
+    return res.json();
+  } catch (err) {
+    console.error('Product search fetch failed:', err);
+    throw err;
   }
-  return res.json();
 } 
